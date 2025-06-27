@@ -34,6 +34,7 @@ RUN apt-get update && \
     # Network tools
     net-tools \
     netcat \
+    dos2unix \
     # PPA req
     software-properties-common && \
     # Userland apps
@@ -61,6 +62,15 @@ ENV USERNAME=computeruse
 ENV HOME=/home/$USERNAME
 RUN useradd -m -s /bin/bash -d $HOME $USERNAME
 RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# --- THIS IS THE CRUCIAL FIX ---
+# Copy the files FIRST, then fix their line endings and permissions as ROOT,
+# BEFORE switching to the non-root user.
+COPY --chown=$USERNAME:$USERNAME image/ $HOME
+RUN dos2unix $HOME/*.sh
+RUN chmod +x $HOME/*.sh
+# -----------------------------
+
 USER computeruse
 WORKDIR $HOME
 
@@ -90,8 +100,7 @@ RUN python -m pip install --upgrade pip==23.1.2 setuptools==58.0.4 wheel==0.40.0
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/requirements.txt $HOME/computer_use_demo/requirements.txt
 RUN python -m pip install -r $HOME/computer_use_demo/requirements.txt
 
-# setup desktop env & app
-COPY --chown=$USERNAME:$USERNAME image/ $HOME
+# Copy the demo code after everything is set up
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/ $HOME/computer_use_demo/
 
 ARG DISPLAY_NUM=1
@@ -101,4 +110,4 @@ ENV DISPLAY_NUM=$DISPLAY_NUM
 ENV HEIGHT=$HEIGHT
 ENV WIDTH=$WIDTH
 
-ENTRYPOINT [ "./entrypoint.sh" ]
+ENTRYPOINT [ "./custom_entrypoint.sh" ]

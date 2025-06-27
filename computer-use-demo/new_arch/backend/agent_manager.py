@@ -4,12 +4,12 @@ from functools import partial
 from typing import List, Dict, Any
 
 # --- Imports from the original demo code ---
-# We can do this because we mounted the directory in docker-compose.yml
 from computer_use_demo.loop import sampling_loop, APIProvider
 from computer_use_demo.tools import ToolResult, ToolVersion
 
-# Pydantic models from our api.py for type hinting
-from .api import Message
+# --- CORRECTED IMPORT ---
+# Import 'Message' from our new schemas file to break the circular dependency.
+from .schemas import Message
 
 
 class AgentManager:
@@ -30,8 +30,16 @@ class AgentManager:
         A synchronous callback to handle tool results.
         Puts the tool output onto the queue to be sent over the WebSocket.
         """
+        # --- CORRECTED SERIALIZATION ---
+        # The ToolResult object does not have a .to_dict() method.
+        # We manually create a dictionary from its known attributes.
+        content = {
+            "output": tool_output.output,
+            "error": tool_output.error,
+            "base64_image": tool_output.base64_image,
+        }
         # We wrap the tool output in a standard message format
-        message = {"role": "tool", "content": tool_output.to_dict(), "tool_id": tool_id}
+        message = {"role": "tool", "content": content, "tool_id": tool_id}
         self.update_queue.put_nowait(message)
 
     def _agent_output_callback(self, content_block: Dict[str, Any]):
@@ -47,7 +55,7 @@ class AgentManager:
         Starts the agent sampling loop as a background task.
         """
         try:
-            # We add a final "sentinel" message to the queue to signal completion.
+            # We add a "system" message to the queue to signal the start.
             await self.update_queue.put({"role": "system", "content": "Agent process started."})
 
             # The main call to the original agent loop
@@ -64,10 +72,8 @@ class AgentManager:
                 messages=self.messages,
                 
                 # --- Callbacks ---
-                # We use partial to pass `self` to the callback methods.
                 output_callback=self._agent_output_callback,
                 tool_output_callback=self._tool_output_callback,
-                # This callback is for logging HTTP requests, we can ignore it for now
                 api_response_callback=lambda req, resp, err: None,
             )
             self.messages = final_messages

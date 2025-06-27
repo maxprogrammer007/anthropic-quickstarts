@@ -1,17 +1,12 @@
 import asyncio
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-# Correctly import the AgentManager from our agent_manager.py file
+# Correctly import the AgentManager
 from .agent_manager import AgentManager
+# Correctly import all necessary models from our new schemas file
+from .schemas import CreateTaskRequest, TaskResponse
 
-# Pydantic models (no changes here)
-class CreateTaskRequest(BaseModel):
-    prompt: str
-
-class TaskResponse(BaseModel):
-    task_id: str
-    prompt: str
+# The old, duplicate class definitions for CreateTaskRequest and TaskResponse have been removed from here.
 
 router = APIRouter(prefix="/api/v1", tags=["Agent Tasks"])
 
