@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  agent-environment:
+    build:
+      # Corrected Context: Go up one directory from new_arch to find the Dockerfile
+      context: ..
+      dockerfile: Dockerfile
+    shm_size: '2gb'
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  backend:
+    build:
+      # This context is correct because the backend Dockerfile is in new_arch/backend
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    # We also need to correct this path to go up one level
+    volumes:
+      - ../computer_use_demo:/app/computer_use_demo
+    depends_on:
+      - agent-environment
+    # This tells docker-compose to load the .env file from the backend directory
+    env_file:
+      - ./backend/.env
